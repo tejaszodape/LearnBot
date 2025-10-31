@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // <-- 1. Import hooks
 import { Question } from '../types';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
@@ -15,11 +15,51 @@ export function TestView({ questions, loading, onComplete }: TestViewProps) {
   const [testComplete, setTestComplete] = useState(false);
   const [score, setScore] = useState<number | null>(null);
 
+  // 2. Add state for the countdown
+  const [countdown, setCountdown] = useState(15);
+
+  // 3. Add effect for the timer logic
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+
+    if (loading) {
+      // Reset countdown to 15 every time loading starts
+      setCountdown(15);
+
+      timer = setInterval(() => {
+        setCountdown((prevCountdown) => {
+          if (prevCountdown <= 1) {
+            clearInterval(timer); // Stop timer when it reaches 0
+            return 0;
+          }
+          return prevCountdown - 1; // Decrement countdown
+        });
+      }, 1000);
+    } else {
+      // Clear interval if loading becomes false
+      if (timer) {
+        clearInterval(timer);
+      }
+    }
+
+    // Cleanup function: clears the interval when component unmounts
+    // or when `loading` changes again
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [loading]); // This effect depends on the `loading` prop
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
         <p className="text-gray-600">Generating quiz questions...</p>
+        {/* 4. Display the countdown */}
+        <p className="text-2xl font-bold text-blue-700 mt-2">
+          {countdown}s
+        </p>
       </div>
     );
   }
@@ -47,7 +87,7 @@ export function TestView({ questions, loading, onComplete }: TestViewProps) {
       const score = Math.round(
         (selectedAnswers.filter((ans, idx) => ans === questions[idx].correct).length / questions.length) * 100
       );
-      setScore(score); 
+      setScore(score);
       setTestComplete(true);
       onComplete(score);
     } else {
@@ -56,40 +96,39 @@ export function TestView({ questions, loading, onComplete }: TestViewProps) {
     }
   };
 
- if (testComplete && score !== null) {
-  const correctCount = selectedAnswers.filter((ans, idx) => ans === questions[idx].correct).length;
+  if (testComplete && score !== null) {
+    const correctCount = selectedAnswers.filter((ans, idx) => ans === questions[idx].correct).length;
 
-  return (
-    <div className="text-center py-12">
-      <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 ${
-        score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100'
-      }`}>
-        <span className={`text-4xl font-bold ${
-          score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'
+    return (
+      <div className="text-center py-12">
+        <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 ${
+          score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100'
         }`}>
-          {score}%
-        </span>
+          <span className={`text-4xl font-bold ${
+            score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'
+          }`}>
+            {score}%
+          </span>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Test Complete!</h3>
+        <p className="text-gray-600 mb-6">
+          You got {correctCount} out of {questions.length} questions correct.
+        </p>
+        <button
+          onClick={() => {
+            setCurrentQuestion(0);
+            setSelectedAnswers([]);
+            setShowFeedback(false);
+            setTestComplete(false);
+            setScore(null);
+          }}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          Retake Test
+        </button>
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Test Complete!</h3>
-      <p className="text-gray-600 mb-6">
-        You got {correctCount} out of {questions.length} questions correct.
-      </p>
-      <button
-        onClick={() => {
-          setCurrentQuestion(0);
-          setSelectedAnswers([]);
-          setShowFeedback(false);
-          setTestComplete(false);
-          setScore(null);
-        }}
-        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-      >
-        Retake Test
-      </button>
-    </div>
-  );
-}
-
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto">

@@ -1,4 +1,5 @@
 import { CheckCircle, Loader2, BookOpen, BrainCircuit } from 'lucide-react';
+import { useState, useEffect } from 'react'; // <-- 1. Import hooks
 
 interface LearnViewProps {
   content: string;
@@ -6,6 +7,42 @@ interface LearnViewProps {
 }
 
 export function LearnView({ content, loading }: LearnViewProps) {
+  // 2. Add state for the countdown
+  const [countdown, setCountdown] = useState(15);
+
+  // 3. Add effect for the timer logic
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+
+    if (loading) {
+      // Reset countdown to 15 every time loading starts
+      setCountdown(15);
+
+      timer = setInterval(() => {
+        setCountdown((prevCountdown) => {
+          if (prevCountdown <= 1) {
+            clearInterval(timer); // Stop timer when it reaches 0
+            return 0;
+          }
+          return prevCountdown - 1; // Decrement countdown
+        });
+      }, 1000);
+    } else {
+      // Clear interval if loading becomes false
+      if (timer) {
+        clearInterval(timer);
+      }
+    }
+
+    // Cleanup function: clears the interval when component unmounts
+    // or when `loading` changes again
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [loading]); // This effect depends on the `loading` prop
+
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200/80 flex flex-col h-[500px] transform transition-all duration-300 hover:shadow-2xl">
       {/* Header Section */}
@@ -27,20 +64,24 @@ export function LearnView({ content, loading }: LearnViewProps) {
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
             <p className="text-lg font-medium">Generating Learning Content...</p>
+            {/* 4. Display the countdown */}
+            <p className="text-2xl font-bold text-indigo-600 mt-2">
+              {countdown}s
+            </p>
             <p className="text-sm">Please wait a moment.</p>
           </div>
         )}
 
         {!loading && !content && (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-             <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-40" />
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-40" />
             <h4 className="text-lg font-medium">Ready to Learn?</h4>
             <p className="text-sm text-center max-w-xs mt-1">Select a subject and topic from the dropdowns to generate educational content.</p>
           </div>
         )}
 
         {!loading && content && (
-           <div className="prose prose-indigo max-w-none animate-fade-in-up">
+          <div className="prose prose-indigo max-w-none animate-fade-in-up">
             <div className="flex items-start gap-3 mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <CheckCircle className="w-7 h-7 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>

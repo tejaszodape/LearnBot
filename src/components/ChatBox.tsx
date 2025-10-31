@@ -12,6 +12,9 @@ interface ChatBoxProps {
 export function ChatBox({ messages, onSendMessage, loading, disabled }: ChatBoxProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 1. Add state for the countdown, default to 10
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
     // Only scroll to the bottom automatically when the user sends a message (loading starts).
@@ -20,6 +23,39 @@ export function ChatBox({ messages, onSendMessage, loading, disabled }: ChatBoxP
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [loading]);
+
+  // 2. Add effect for the timer logic
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+
+    if (loading) {
+      // Reset countdown to 10 every time loading starts
+      setCountdown(10);
+
+      timer = setInterval(() => {
+        setCountdown((prevCountdown) => {
+          if (prevCountdown <= 1) {
+            clearInterval(timer); // Stop timer when it reaches 0
+            return 0;
+          }
+          return prevCountdown - 1; // Decrement countdown
+        });
+      }, 1000);
+    } else {
+      // Clear interval if loading becomes false
+      if (timer) {
+        clearInterval(timer);
+      }
+    }
+
+    // Cleanup function: clears the interval when component unmounts
+    // or when `loading` changes again
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [loading]); // This effect depends on the `loading` prop
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +71,7 @@ export function ChatBox({ messages, onSendMessage, loading, disabled }: ChatBoxP
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-2xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-             <Bot className="w-6 h-6" />
+            <Bot className="w-6 h-6" />
           </div>
           <div>
             <h3 className="font-bold text-gray-800 text-lg tracking-wide">AI Tutor</h3>
@@ -85,8 +121,10 @@ export function ChatBox({ messages, onSendMessage, loading, disabled }: ChatBoxP
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 text-white shadow-sm">
               <Bot className="w-5 h-5" />
             </div>
-            <div className="max-w-[75%] rounded-xl px-4 py-3 shadow-sm transition-all bg-white text-gray-800 border border-gray-200 rounded-bl-none">
-                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+            {/* 3. Updated loading block to show timer */}
+            <div className="max-w-[75%] rounded-xl px-4 py-3 shadow-sm transition-all bg-white text-gray-800 border border-gray-200 rounded-bl-none flex items-center gap-2">
+              <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+              <span className="text-sm font-medium text-indigo-600">{countdown}s</span>
             </div>
           </div>
         )}
@@ -117,4 +155,3 @@ export function ChatBox({ messages, onSendMessage, loading, disabled }: ChatBoxP
     </div>
   );
 }
-
